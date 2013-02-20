@@ -56,55 +56,50 @@ Dojs = {
     } 
   },
 
-  readFile : function() {
+  /**
+   * Method to seek the model folder and extract the comment blocks from 
+   * the javascript file.
+   * @method _processModels
+   * @access private
+   */
+  _processModels : function()  {
     var appStruct = appStructure[this.appType.toLowerCase()],
       filePath = path.join(this.path, appStruct.parent, 'scripts', 'models'),
       tempFileList = fs.readdirSync(filePath),
-      fileList = {};
+      fileList = {};  
 
-      for (var i = 0; i < tempFileList.length; i++) {
-        if(!tempFileList[i].match('~')) {
-          var file = fs.readFileSync( path.join(filePath, tempFileList[i]) )
-            .toString()
-            .replace(/\n|\t/g,'');
-          fileList[tempFileList[i]] = file;
-        }
-      };
+    for (var i = 0; i < tempFileList.length; i++) {
+      if(!tempFileList[i].match('~')) {
 
-      for(var file in fileList) {
-        var blocks
-console.log(fileList[file]);
-        blocks = fileList[file].match(/\/\*{2}(\s|\*|\w|[a-zA-Z0-9|\.|@])+\//g);
-console.log("blocks >>> ", blocks);
+        var file = fs.readFileSync(path.join(filePath, tempFileList[i]))
+          .toString()
+          .replace(/\n|\t/g, '');
+
+        blocks = file.match(/\/\*{2}(\s|\*|\w|[a-zA-Z0-9|\.|@])+\//g);    
+
         if(blocks != null && blocks.length > 0) {
-          var commentObj = [];
-          for(var i = 0; i < blocks.length; i++)  {
-            commentObj.push(this.prepareCommentBlock(blocks[i]));
-var that = this;
-console.log(path.join(that.path,'doc.jade'));
+          var commentObject = [];
 
-            // var indexFile = jade.compile(
-            //   fs.readFileSync(
-            //     path.join(that.path,'doc.jade').toString()
-            //   ));
-
-            //;
-
-            
-
+          for(var j = 0; j< blocks.length; j++)  {
+            commentObject.push(this._prepareCommentBlock(blocks[j]));
           }
 
-          jadeFile = fs.readFileSync( path.join(that.path,'doc.jade'), 'utf8' )
-            jadeFile = jade.compile(jadeFile)({ comments : commentObj });
+          jadeFile = fs.readFileSync( path.join(this.path,'doc.jade'), 'utf8' )
+          jadeFile = jade.compile(jadeFile)({ comments : commentObject });
 
-
-            fs.writeFileSync( path.join(that.path, '/doc.html'), jadeFile );
-            break;
+          fs.writeFileSync( path.join(this.path, 'doc/models', tempFileList[i].replace('.js','') + '.html'), jadeFile );
         }
       }
+    }
   },
 
-  prepareCommentBlock : function(commentString)  {
+  /**
+   * Method to prepare the comment object from the comment block extracted
+   * from the javascript files.
+   * @method _prepareComemntBlock
+   * @access private
+   */ 
+  _prepareCommentBlock : function(commentString)  {
     var commentBlockObj = {
       module : '',
       comment : '',
@@ -137,7 +132,7 @@ console.log(path.join(that.path,'doc.jade'));
   run : function()  {
     if(this.checkAppStructure())  {
       this.createDirectory();
-      this.readFile();
+      this._processModels();
     }else {
       console.log('no folder structure!!!');
     }

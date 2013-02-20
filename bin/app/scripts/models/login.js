@@ -1,3 +1,8 @@
+/**
+ * Model to manage user details. Also used for user
+ * authentication process. this model can be used as user profile.
+ * @module LoginModel
+ */
 var LoginModel = Backbone.Model.extend({
 
 	loginUrl : '/user/login',
@@ -29,11 +34,21 @@ var LoginModel = Backbone.Model.extend({
 		}
 	},
 
+	/**
+	 * Method to login.
+	 * @method login
+	 * @access public
+	 */
 	login : function()	{
 		this.urlRoot = "http://localhost:8080" + this.loginUrl;
 		this.save();
 	},
 
+	/**
+	 * Method to set the cookies into the browser.
+	 * @method setCookie
+	 * @access public
+	 */
 	setCookie : function()	{
 		document.cookie = "token=" + this.get("token");
 	}

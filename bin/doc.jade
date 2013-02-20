@@ -4,7 +4,6 @@ html
     title test
   body
     - each comment in comments
-      #{comment.modules}
       - if(comment.module !== '')
           h2 #{comment.module}
           p #{comment.comment}
