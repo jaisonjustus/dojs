@@ -1,52 +1,69 @@
+/* Module dependcies. */
 var program = require('commander'),
   fs = require('fs'),
   path = require('path'),
   jade = require('jade'),
-  Dojs = {},
+  ProgressBar = require('progress');
+
+/* Program variables. */
+var Dojs = {}, 
+  bar = '',
+  folderStructure = {}
   appStructure = {};
 
+/* Object to let the grabber to understand the folder structure built using
+ yeoman. */ 
 appStructure = {
-
   backbone : {
     parent : 'app',
     subfolers : {
       scripts : ['views', 'models', 'collections']
     }
   }
-
 };
 
+folderStructure = {
+  backbone : ['models', 'collections', 'views']
+}
+
+
+
+/** 
+ * Module to manage the dojs documentor functionality. The module help to generate documentation
+ * for different javascript framework like backbonejs and angular js. also provide support for 
+ * single javascript files. enhaced version to provide support of the markdown. currently the 
+ * module support parsing throught the folder struture provide by the yeoman building library.
+ * @module Dojs
+ */
 Dojs = {
+
+  /* Variable to track the path of the project folder. */
   path : '',
 
+  /* Default grabber project type its backbone js. */
   appType : 'backbone',
 
+  /* Progress bar object. */
+  progressBar : null,
+
+  /**
+   * Method to initialize the dojs library. 
+   * @method initialize
+   * @access public
+   */
   initialize : function() {
     this.appType = 'backbone';
     this.path = process.cwd();
   },
 
-  checkAppStructure : function()  {
-    var appStruct = appStructure[this.appType.toLowerCase()],
-      status = true;
-
-    if(fs.existsSync(path.join(this.path, appStruct.parent))) {
-      if(fs.existsSync(path.join(this.path, appStruct.parent, 'scripts')))  {
-        for(var folder in appStruct.parent.scripts) {
-          if(!fs.existsSync(path.join(this.path, appStruct.parent, 'scripts', folder))) {
-            status = false;
-            break;
-          }
-        }
-      }else { status = false; }
-    }else { status = false; }
-
-    return status;
-  },
-
-  createDirectory : function(appType)  {
+  /**
+   * Method to create the documentation folder in the project folder.
+   * @method _createDirectory
+   * @access private
+   */
+  _createDirectory : function(appType)  {
     var folders = [],
-      docPath = path.join(this.path,'doc');
+      docPath = path.join(this.path,'dojs');
 
     fs.mkdirSync(docPath);
     folders = appStructure[this.appType].subfolers.scripts;
@@ -59,38 +76,35 @@ Dojs = {
   /**
    * Method to seek the model folder and extract the comment blocks from 
    * the javascript file.
-   * @method _processModels
+   * @method _processFiles
    * @access private
+   * @param array fileList
    */
-  _processModels : function()  {
-    var appStruct = appStructure[this.appType.toLowerCase()],
-      filePath = path.join(this.path, appStruct.parent, 'scripts', 'models'),
-      tempFileList = fs.readdirSync(filePath),
-      fileList = {};  
+  _processFiles : function(fileList, folderName)  {
+    var that = this;
 
-    for (var i = 0; i < tempFileList.length; i++) {
-      if(!tempFileList[i].match('~')) {
+    fileList.forEach(function(filenameWithPath) {
+      var file = fs.readFileSync(filenameWithPath)
+        .toString()
+        .replace(/\n|\t/g, '');
 
-        var file = fs.readFileSync(path.join(filePath, tempFileList[i]))
-          .toString()
-          .replace(/\n|\t/g, '');
+      blocks = file.match(/\/\*{2}(\s|\*|\w|[a-zA-Z0-9|\.|@])+\//g);    
 
-        blocks = file.match(/\/\*{2}(\s|\*|\w|[a-zA-Z0-9|\.|@])+\//g);    
+      if(blocks != null && blocks.length > 0) {
+        var commentObject = [];
 
-        if(blocks != null && blocks.length > 0) {
-          var commentObject = [];
-
-          for(var j = 0; j< blocks.length; j++)  {
-            commentObject.push(this._prepareCommentBlock(blocks[j]));
-          }
-
-          jadeFile = fs.readFileSync( path.join(this.path,'doc.jade'), 'utf8' )
-          jadeFile = jade.compile(jadeFile)({ comments : commentObject });
-
-          fs.writeFileSync( path.join(this.path, 'doc/models', tempFileList[i].replace('.js','') + '.html'), jadeFile );
+        for(var j = 0; j< blocks.length; j++)  {
+          commentObject.push(that._prepareCommentBlock(blocks[j]));
         }
+
+        jadeFile = fs.readFileSync( path.join(that.path,'doc.jade'), 'utf8' );
+        jadeFile = jade.compile(jadeFile)({ comments : commentObject });
+
+        fs.writeFileSync( path.join(that.path, 'dojs/' + folderName, path.basename(filenameWithPath).replace('.js','') + '.html'), jadeFile );
       }
-    }
+
+      that.progressBar.tick();
+    });
   },
 
   /**
@@ -129,13 +143,92 @@ Dojs = {
     return commentBlockObj;
   },
 
+  /**
+   * Method to categorize the files to corresponding folders.
+   * @method _categorizeFileToFolder
+   * @access private
+   */
+  _categorizeFileToFolder : function(fileList)  {
+    var categoryList = {
+      count : 0
+    };
+
+    folderStructure[this.appType].forEach(function(folder)  {
+      categoryList[folder] = [];
+      fileList.forEach(function(file) {
+        if(file.match(folder))  {
+          categoryList[folder].push(file);
+          categoryList.count += 1;
+        }
+      })
+    });
+
+    return categoryList;
+  },
+
+  /**
+   * Method to walk through the directory structure.
+   * @method _dirWalk
+   * @access private
+   */
+  _dirWalk : function(directory, callback) {
+    var results = [], that = this;
+
+    fs.readdir(directory, function(err, list) {
+      if (err) return callback(err);
+      var i = 0;
+      (function next() {
+        var file = list[i++];
+        if (!file) return callback(null, results);
+        file = directory + '/' + file;
+        fs.stat(file, function(err, stat) {
+          if (stat && stat.isDirectory()) {
+            if(folderStructure[that.appType].indexOf(path.basename(file)) > -1)  {
+              that._dirWalk(file, function(err, res) {
+                results = results.concat(res);
+              });
+            }
+            next();
+          } else {
+            results.push(file);
+            next();
+          }
+        });
+      })();
+    });
+  },
+
+  /**
+   * Method to run the comment grabber.
+   * @method run
+   * @access public
+   */
   run : function()  {
-    if(this.checkAppStructure())  {
-      this.createDirectory();
-      this._processModels();
-    }else {
-      console.log('no folder structure!!!');
-    }
+    var that = this, categoryList = {}, fileCount = 0;
+
+    this._createDirectory();
+    this._dirWalk( path.join(this.path,'app/scripts'), function(error, fileList) {
+      if(error) throw error;
+
+      categoryList = that._categorizeFileToFolder(fileList);
+      fileCount = categoryList.count;
+      delete categoryList.count;
+
+      that.progressBar = new ProgressBar('  Generating Document [:bar] :percent', {
+          complete: '='
+        , incomplete: ' '
+        , width: 50
+        , total: fileCount
+      });
+
+      fileList = [];
+
+      for(var folder in categoryList) {
+        that._processFiles(categoryList[folder], folder);
+      }
+
+      process.exit();
+    });
   }
 };
 
@@ -145,6 +238,11 @@ program
   .parse(process.argv);
 
 if(program.generate)  {
+  console.log('\n DOJS Documentation Generate **')
   Dojs.initialize(program.generate);
   Dojs.run();
 };
+
+process.on('exit', function(){
+  console.log('\n');
+});

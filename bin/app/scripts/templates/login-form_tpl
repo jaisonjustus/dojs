@@ -1,3 +1,0 @@
-<input type="text" id="username" name="username" placeholder="Username" />
-			<input type="password" id="password" name="password", placeholder="Password" />
-			<input type="button" id="login" name="login" value="Register/Login" />
