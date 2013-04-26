@@ -1,4 +1,4 @@
 dojs
 ====
 
-Javascript document generator
+Javascript document generator. to use `node dojs-native --generate`
