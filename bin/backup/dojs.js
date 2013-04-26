@@ -114,6 +114,7 @@ Dojs = {
    * @access private
    */ 
   _prepareCommentBlock : function(commentString)  {
+    console.log(commentString);
     var commentBlockObj = {
       module : '',
       comment : '',
@@ -172,30 +173,23 @@ Dojs = {
    * @access private
    */
   _dirWalk : function(directory, callback) {
-    var results = [], that = this;
+    var fileList = [],
+        that = this,
+        fileFolderList = [];
 
-    fs.readdir(directory, function(err, list) {
-      if (err) return callback(err);
-      var i = 0;
-      (function next() {
-        var file = list[i++];
-        if (!file) return callback(null, results);
-        file = directory + '/' + file;
-        fs.stat(file, function(err, stat) {
-          if (stat && stat.isDirectory()) {
-            if(folderStructure[that.appType].indexOf(path.basename(file)) > -1)  {
-              that._dirWalk(file, function(err, res) {
-                results = results.concat(res);
-              });
-            }
-            next();
-          } else {
-            results.push(file);
-            next();
-          }
-        });
-      })();
+    fileFolderList = fs.readdirSync(directory);
+    console.log(fileFolderList);
+
+    fileFolderList.forEach(function(fileFolder) {
+      fileFolder = path.join(directory, fileFolder);
+      if(fs.statSync(fileFolder).isDirectory())  {
+        fileList = fileList.concat(that._dirWalk(fileFolder, function()  {}));
+      }else {
+        fileList.push(fileFolder)
+      }
     });
+
+    return fileList;
   },
 
   /**
@@ -204,13 +198,20 @@ Dojs = {
    * @access public
    */
   run : function()  {
-    var that = this, categoryList = {}, fileCount = 0;
+    var that = this,
+        categoryList = {},
+        fileCount = 0, 
+        fileList = [];
 
     this._createDirectory();
-    this._dirWalk( path.join(this.path,'app/scripts'), function(error, fileList) {
-      if(error) throw error;
+
+    fileList = this._dirWalk(path.join(this.path, 'app/scripts'));
+
+    if(fileList.length > 0) {
 
       categoryList = that._categorizeFileToFolder(fileList);
+      console.log(categoryList);
+
       fileCount = categoryList.count;
       delete categoryList.count;
 
@@ -224,11 +225,12 @@ Dojs = {
       fileList = [];
 
       for(var folder in categoryList) {
-        that._processFiles(categoryList[folder], folder);
+        //console.log(categoryList[folder]);
+        //that._processFiles(categoryList[folder], folder);
       }
+    }
 
-      process.exit();
-    });
+    process.exit();
   }
 };
 

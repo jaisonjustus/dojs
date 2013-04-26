@@ -1,7 +1,12 @@
 {
-  "author": "",
-  "name": "",
-  "version": "0.0.0",
-  "dependencies": {},
+  "author": "Jaison Justus",
+  "email" : "jaison.justus.lp@gmail.com",
+  "url" : "jaisonjustus.github.io",
+  "name": "Dojs",
+  "description" : "Javscript Code Documentation generator.",
+  "version": "0.0.1",
+  "dependencies": {
+    "commander" : ""
+  },
   "devDependencies": {}
 }
