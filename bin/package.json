@@ -4,7 +4,7 @@
   "url" : "jaisonjustus.github.io",
   "name": "Dojs",
   "description" : "Javscript Code Documentation generator.",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "dependencies": {
     "commander" : ""
   },
