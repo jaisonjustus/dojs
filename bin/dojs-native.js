@@ -115,6 +115,7 @@ Dojs = {
   _prepareCommentBlock : function(commentString)  {
     var commentBlockObj = {
       module : '',
+      override : '',
       namespace : '',
       comment : '',
       method : '',
@@ -131,6 +132,8 @@ Dojs = {
 
       if(commentString[i].match('@module'))  {
         commentBlockObj.module = commentString[i].replace('@module','').replace(/\s+/, '')
+      }else if(commentString[i].match('@override')){
+        commentBlockObj.override = 'true';
       }else if(commentString[i].match('@namespace')) {
         commentBlockObj.namespace = commentString[i].replace('@namespace','').replace(/\s+/, '');
       }else if(commentString[i].match('@method')) {
